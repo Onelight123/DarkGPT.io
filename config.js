@@ -4,4 +4,5 @@
 // Replace the API_KEY below with your own key.
 // Example: const API_KEY = "API-FAKEAPIEXAMPLEFORPANDY";
 
-const API_KEY = "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";
+const API_KEY = "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";
+
