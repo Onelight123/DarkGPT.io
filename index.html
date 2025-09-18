@@ -1925,7 +1925,7 @@ showAllBtn.onclick = function() {
                 renderWelcomeText();
                 
                 await cleanupOldChats();
-                setInterval(loadChats, 3000);
+                setInterval(loadChats, 3000);   
             } catch (error) {
                 console.error("Error during app initialization:", error);
             }
@@ -1934,6 +1934,207 @@ showAllBtn.onclick = function() {
         document.addEventListener('DOMContentLoaded', () => {
             setTimeout(initApp, 100);
         });
+        (function(){
+  'use strict';
+
+  const KEY_STORAGE = 'OPENROUTER_API_KEY';
+  const ID_PREFIX = 'orkey';
+  const HTML = `
+    <div id="${ID_PREFIX}-modal" class="${ID_PREFIX}-modal">
+      <div class="${ID_PREFIX}-card">
+        <h2>Configurer la clé OpenRouter</h2>
+        <label class="${ID_PREFIX}-label">Clé API (sk-or-...)</label>
+        <input id="${ID_PREFIX}-input" type="password" placeholder="sk-or-xxxxxxxx..." />
+        <label class="${ID_PREFIX}-remember"><input id="${ID_PREFIX}-remember" type="checkbox" checked /> Mémoriser sur cet appareil</label>
+        <div class="${ID_PREFIX}-actions">
+          <button id="${ID_PREFIX}-test" class="${ID_PREFIX}-btn">Tester</button>
+          <div class="${ID_PREFIX}-spacer"></div>
+          <button id="${ID_PREFIX}-clear" class="${ID_PREFIX}-btn danger">Effacer</button>
+          <button id="${ID_PREFIX}-cancel" class="${ID_PREFIX}-btn">Annuler</button>
+          <button id="${ID_PREFIX}-save" class="${ID_PREFIX}-btn primary">Enregistrer</button>
+        </div>
+        <div id="${ID_PREFIX}-msg" class="${ID_PREFIX}-msg"></div>
+        <div class="${ID_PREFIX}-help">Obtenir une clé: https://openrouter.ai/</div>
+      </div>
+    </div>
+    <button id="${ID_PREFIX}-open" class="${ID_PREFIX}-fab" title="Clé API">🔑</button>
+  `;
+  const CSS = `
+    .${ID_PREFIX}-modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:16px;z-index:9999}
+    .${ID_PREFIX}-modal.open{display:flex}
+    .${ID_PREFIX}-card{width:100%;max-width:440px;background:#151515;color:#fff;border:1px solid #333;border-radius:14px;padding:16px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif}
+    .${ID_PREFIX}-card h2{margin:0 0 12px 0;font-size:18px}
+    #${ID_PREFIX}-input{width:100%;padding:10px;border-radius:8px;border:1px solid #333;background:#1a1a1a;color:#fff;margin-bottom:10px}
+    .${ID_PREFIX}-remember{display:flex;align-items:center;gap:8px;font-size:14px;margin-bottom:10px}
+    .${ID_PREFIX}-actions{display:flex;gap:8px;align-items:center;margin-top:8px}
+    .${ID_PREFIX}-spacer{flex:1}
+    .${ID_PREFIX}-btn{padding:8px 12px;border-radius:8px;border:1px solid #333;background:#202020;color:#fff;cursor:pointer}
+    .${ID_PREFIX}-btn.primary{background:#646bd0;border:none}
+    .${ID_PREFIX}-btn.danger{background:#2b0000;border:1px solid #3b0000}
+    .${ID_PREFIX}-help{color:#9aa0a6;font-size:12px;margin-top:8px}
+    .${ID_PREFIX}-msg{margin-top:8px;font-size:13px;white-space:pre-wrap}
+    .${ID_PREFIX}-msg.ok{color:#8fff94}.${ID_PREFIX}-msg.err{color:#ff8a8a}
+    .${ID_PREFIX}-fab{position:fixed;right:14px;bottom:14px;background:#202020;border:1px solid #333;color:#fff;border-radius:999px;padding:10px 12px;cursor:pointer;z-index:9999}
+  `;
+
+  // Inject style + HTML once DOM ready
+  document.addEventListener('DOMContentLoaded', () => {
+    // Style
+    if (!document.getElementById(ID_PREFIX+'-style')) {
+      const style = document.createElement('style');
+      style.id = ID_PREFIX+'-style';
+      style.textContent = CSS;
+      document.head.appendChild(style);
+    }
+    // HTML
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = HTML;
+    document.body.appendChild(wrapper);
+
+    // Try to move the 🔑 button into your top-bar if possible
+    const fab = document.getElementById(ID_PREFIX+'-open');
+    const topToggle = document.querySelector('.top-bar .theme-toggle');
+    if (topToggle) {
+      fab.classList.remove(ID_PREFIX+'-fab');
+      fab.style.all = 'unset';
+      fab.style.cursor = 'pointer';
+      fab.style.padding = '6px 8px';
+      fab.style.borderRadius = '8px';
+      fab.style.border = '1px solid #333';
+      fab.style.background = '#202020';
+      fab.style.color = '#fff';
+      topToggle.appendChild(fab);
+    }
+
+    bindEvents();
+  });
+
+  // Storage utils
+  function getKey(){
+    return localStorage.getItem(KEY_STORAGE) || sessionStorage.getItem(KEY_STORAGE) || '';
+  }
+  function setKey(k, remember){
+    localStorage.removeItem(KEY_STORAGE);
+    sessionStorage.removeItem(KEY_STORAGE);
+    if (remember) localStorage.setItem(KEY_STORAGE, k);
+    else sessionStorage.setItem(KEY_STORAGE, k);
+  }
+  function clearKey(){
+    localStorage.removeItem(KEY_STORAGE);
+    sessionStorage.removeItem(KEY_STORAGE);
+  }
+
+  // Modal helpers
+  function openModal(){
+    const modal = document.getElementById(ID_PREFIX+'-modal');
+    const input = document.getElementById(ID_PREFIX+'-input');
+    const msg   = document.getElementById(ID_PREFIX+'-msg');
+    if (!modal) return;
+    msg.textContent = ''; msg.className = ID_PREFIX+'-msg';
+    modal.classList.add('open');
+    if (input) {
+      input.value = getKey();
+      setTimeout(() => input.focus(), 30);
+    }
+  }
+  function closeModal(){
+    const modal = document.getElementById(ID_PREFIX+'-modal');
+    modal?.classList.remove('open');
+  }
+
+  // Test current key
+  async function testKey(k){
+    try{
+      const res = await fetch('https://openrouter.ai/api/v1/models', {
+        headers: { 'Authorization': 'Bearer ' + k }
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const j = await res.json();
+      return { ok: true, count: (j?.data?.length || 0) };
+    } catch(e){
+      return { ok: false, error: String(e.message || e) };
+    }
+  }
+
+  let waiters = []; // pending resolvers for require()
+
+  function bindEvents(){
+    const modal   = document.getElementById(ID_PREFIX+'-modal');
+    const openBtn = document.getElementById(ID_PREFIX+'-open');
+    const input   = document.getElementById(ID_PREFIX+'-input');
+    const remember= document.getElementById(ID_PREFIX+'-remember');
+    const saveBtn = document.getElementById(ID_PREFIX+'-save');
+    const clearBtn= document.getElementById(ID_PREFIX+'-clear');
+    const cancel  = document.getElementById(ID_PREFIX+'-cancel');
+    const testBtn = document.getElementById(ID_PREFIX+'-test');
+    const msg     = document.getElementById(ID_PREFIX+'-msg');
+
+    openBtn?.addEventListener('click', openModal);
+    modal?.addEventListener('click', (e)=> { if (e.target === modal) { msg.textContent=''; closeModal(); resolveWaiters(''); } });
+    cancel?.addEventListener('click', ()=> { msg.textContent=''; closeModal(); resolveWaiters(''); });
+
+    clearBtn?.addEventListener('click', ()=>{
+      clearKey();
+      msg.textContent = 'Clé effacée.';
+      msg.className = ID_PREFIX+'-msg ok';
+      input.value = '';
+      input.focus();
+    });
+
+    saveBtn?.addEventListener('click', ()=>{
+      const k = (input.value || '').trim();
+      if (!k || !k.startsWith('sk-or-')) {
+        msg.textContent = "Clé invalide. Elle doit commencer par 'sk-or-'.";
+        msg.className = ID_PREFIX+'-msg err';
+        return;
+      }
+      setKey(k, !!remember?.checked);
+      msg.textContent = 'Clé enregistrée.';
+      msg.className = ID_PREFIX+'-msg ok';
+      setTimeout(()=> { closeModal(); resolveWaiters(k); }, 200);
+    });
+
+    testBtn?.addEventListener('click', async ()=>{
+      const k = (input.value || '').trim();
+      msg.textContent = 'Test en cours...';
+      msg.className = ID_PREFIX+'-msg';
+      const r = await testKey(k);
+      if (r.ok) {
+        msg.textContent = 'OK ✅ — modèles accessibles: ' + r.count;
+        msg.className = ID_PREFIX+'-msg ok';
+      } else {
+        msg.textContent = 'Échec ❌ — ' + r.error;
+        msg.className = ID_PREFIX+'-msg err';
+      }
+    });
+
+    input?.addEventListener('keydown', (e)=> { if (e.key === 'Enter') saveBtn?.click(); });
+  }
+
+  function resolveWaiters(val){
+    if (!waiters.length) return;
+    const list = waiters.slice(); waiters = [];
+    list.forEach(fn => { try { fn(val); } catch{} });
+  }
+
+  // Public API
+  window.OpenRouterKey = {
+    get() { return getKey(); },
+    set(k, remember=true){ setKey(k, remember); },
+    clear(){ clearKey(); },
+    open(){ openModal(); },
+    close(){ closeModal(); },
+    async test(k){ return testKey(k || getKey()); },
+    // Ouvre la modale si pas de clé, et résout avec la clé (ou '' si annulé)
+    require(){
+      const existing = getKey();
+      if (existing) return Promise.resolve(existing);
+      openModal();
+      return new Promise(resolve => { waiters.push(resolve); });
+    }
+  };
+
+})();
     </script>
     <!-- Modal de clé API -->
 <div id="api-key-page" class="modal" style="display:none;">
