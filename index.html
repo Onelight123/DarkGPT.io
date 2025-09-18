@@ -1195,6 +1195,77 @@
 <button id="showAllBtn" style="display:none;">Afficher tout</button>
 
 <script>
+    /* ----- Gestion clé API (OpenRouter) ----- */
+let API_KEY = null;
+
+function readApiKey() {
+  return localStorage.getItem('OPENROUTER_API_KEY') || sessionStorage.getItem('OPENROUTER_API_KEY');
+}
+function writeApiKey(key, remember = true) {
+  if (remember) localStorage.setItem('OPENROUTER_API_KEY', key);
+  else sessionStorage.setItem('OPENROUTER_API_KEY', key);
+  API_KEY = key;
+}
+function clearApiKey() {
+  localStorage.removeItem('OPENROUTER_API_KEY');
+  sessionStorage.removeItem('OPENROUTER_API_KEY');
+  API_KEY = null;
+}
+function ensureApiKeyGate() {
+  API_KEY = readApiKey();
+  const gate = document.getElementById('api-key-page');
+  if (!API_KEY) {
+    gate.style.display = 'block';
+  } else {
+    gate.style.display = 'none';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  ensureApiKeyGate();
+
+  const submitBtn = document.getElementById('api-key-submit');
+  const clearBtn  = document.getElementById('api-key-clear');
+  const input     = document.getElementById('api-key-input');
+  const remember  = document.getElementById('api-key-remember');
+
+  if (submitBtn) {
+    submitBtn.addEventListener('click', () => {
+      const key = input.value.trim();
+      if (!key) return alert("Entre une clé API valide.");
+      writeApiKey(key, remember.checked);
+      document.getElementById('api-key-page').style.display = 'none';
+    });
+  }
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      clearApiKey();
+      input.value = '';
+      input.focus();
+    });
+  }
+  if (input) {
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') submitBtn?.click();
+    });
+  }
+
+  // Bouton pour changer de clé dans la top-bar
+  const toggle = document.querySelector('.top-bar .theme-toggle');
+  if (toggle && !document.getElementById('open-key-modal')) {
+    const btn = document.createElement('button');
+    btn.id = 'open-key-modal';
+    btn.className = 'theme-option';
+    btn.title = 'Changer de clé API';
+    btn.textContent = '🔑';
+    btn.addEventListener('click', () => {
+      document.getElementById('api-key-page').style.display = 'block';
+      const existing = readApiKey();
+      document.getElementById('api-key-input').value = existing || '';
+    });
+    toggle.appendChild(btn);
+  }
+});
 const message = "Ceci est un message avec effet typewriter.";
 const typewriterDiv = document.getElementById('typewriter');
 const showAllBtn = document.getElementById('showAllBtn');
@@ -1864,5 +1935,26 @@ showAllBtn.onclick = function() {
             setTimeout(initApp, 100);
         });
     </script>
+    <!-- Modal de clé API -->
+<div id="api-key-page" class="modal" style="display:none;">
+  <div class="modal-content">
+    <div class="modal-title">Entrez votre clé API OpenRouter</div>
+    <input id="api-key-input" class="modal-input" type="password" placeholder="sk-or-xxxxxxxx..." />
+
+    <label style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+      <input type="checkbox" id="api-key-remember" checked />
+      Mémoriser sur cet appareil
+    </label>
+
+    <div class="modal-buttons">
+      <button class="modal-button modal-cancel" id="api-key-clear">Effacer</button>
+      <button class="modal-button modal-submit" id="api-key-submit">Continuer</button>
+    </div>
+
+    <div class="url-display" style="display:block;margin-top:12px;">
+      Obtenir une clé: https://openrouter.ai/
+    </div>
+  </div>
+</div>
 </body>
 </html>
