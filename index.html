@@ -1765,86 +1765,64 @@ showAllBtn.onclick = function() {
             }
         }
 
-        async function sendMessage() {
-            try {
-                const text = messageInput.value.trim();
-                if (!text) return;
+async function sendMessage() {
+  try {
+    const text = messageInput.value.trim();
+    if (!text) return;
 
-                if (!currentChatId) {
-                    const chatId = 'chat_' + Date.now();
-                    currentChatId = chatId;
-                    const chats = (await storage.get('chats')) || [];
-                    const newChat = {
-                        id: chatId,
-                        title: text.substring(0,30) + (text.length>30?'...':''),
-                        created_at: new Date().toISOString(),
-                        updated_at: new Date().toISOString()
-                    };
-                    await storage.set('chats', [...chats, newChat]);
-                    await storage.set(`messages_${chatId}`, []);
-                    
-                    await cleanupOldChats();
-                    
-                    await loadChats();
-                }
+    // ... ton code qui ajoute le message user + loader ...
 
-                addMessageToUI('user', text);
-                const key = `messages_${currentChatId}`;
-                const saved = (await storage.get(key)) || [];
-                const userMsg = { id:'msg_'+Date.now(), chat_id:currentChatId, role:'user', content:text, created_at:new Date().toISOString() };
-                await storage.set(key, [...saved, userMsg]);
-                conversationHistory.push({ role:'user', content:text });
-                messageInput.value=''; messageInput.style.height='auto';
-                hideWelcomeText();
+    const systemPrompt = SP;
 
-                const loading = document.createElement('div');
-                loading.className = 'message ai-message';
-                loading.innerHTML = `<div class="message-avatar ai-message-avatar"><img src="img/pandylogo2.png" alt="User Avatar"></div>
-                                     <div class="message-content"><span class="spinner"></span>Thinking...</div>`;
-                chatMessages.appendChild(loading);
-                chatMessages.scrollTop = chatMessages.scrollHeight;
+    // 1) Récupère la clé (ouvre la modale si absente)
+    const key = await OpenRouterKey.require();
+    if (!key) {
+      addMessageToUI('ai', "Ajoute ta clé API pour continuer. 🔑");
+      return;
+    }
 
-                const systemPrompt = SP;
+    // 2) Appel OpenRouter (remplace ton fetch existant par celui-ci)
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + key,
+        'HTTP-Referer': location.origin,
+        'X-Title': 'DarkGPT'
+      },
+      body: JSON.stringify({
+        model: 'openrouter/auto', // ou ton modèle
+        messages: [
+          { role: 'system', content: systemPrompt },
+          // si jamais tu as des anciens rôles 'ai', on les remappe en 'assistant'
+          ...conversationHistory.map(m => ({
+            role: m.role === 'ai' ? 'assistant' : m.role,
+            content: m.content
+          }))
+        ],
+        temperature: 0.7,
+        max_tokens: 800
+      })
+    });
 
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${API_KEY}`,
-                        'HTTP-Referer': window.location.origin,
-                        'X-Title': 'pandy Chat'
-                    },
-                    body: JSON.stringify({
-                        model: MODEL,
-                        messages: [
-                            { role: 'system', content: systemPrompt },
-                            ...conversationHistory
-                        ]
-                    })
-                });
+    if (!response.ok) {
+      let err = `[${response.status}]`;
+      try { const j = await response.json(); err += ' ' + (j?.error?.message || JSON.stringify(j)); }
+      catch { err += ' ' + (await response.text()); }
+      throw new Error(err);
+    }
 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
+    const completion = await response.json();
+    chatMessages.removeChild(loading);
+    const aiText = completion?.choices?.[0]?.message?.content ?? '(Réponse vide)';
+    addMessageToUI('ai', aiText);
 
-                const completion = await response.json();
-                chatMessages.removeChild(loading);
-                const aiText = completion.choices[0].message.content;
-                addMessageToUI('ai', aiText);
-
-                const after = (await storage.get(key)) || [];
-                const aiMsg = { id:'msg_'+Date.now(), chat_id:currentChatId, role:'ai', content:aiText, created_at:new Date().toISOString() };
-                await storage.set(key, [...after, aiMsg]);
-
-                const chats = (await storage.get('chats')) || [];
-                const updated = chats.map(c=> c.id===currentChatId ? { ...c, updated_at:new Date().toISOString() } : c);
-                await storage.set('chats', updated);
-                await loadChats();
-            } catch (error) {
-                console.error("Error in sendMessage:", error);
-                addMessageToUI('ai', "Sorry, I encountered an error. Please, add API KEY on config.js or change API KEY");
-            }
-        }
+    // ... ton code qui enregistre le message AI + met à jour la liste ...
+  } catch (error) {
+    console.error("Error in sendMessage:", error);
+    addMessageToUI('ai', `⚠️ Erreur API: ${String(error.message || error)}`);
+  }
+}
 
         const textarea = document.querySelector('.input-field');
         const chatArea = document.getElementById('chat-area');
