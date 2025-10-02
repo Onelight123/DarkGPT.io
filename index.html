@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DarkGPT Terminal - by Onelight and Ego</title>
-    <link rel="icon" type="image/png" href="https://i.imgur.com/xeiymIs.png" />
+    <title>OptiStack Terminal - by Onelight</title>
+    <link rel="icon" type="image/OptiStack.png"/>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.7.0/styles/github-dark.min.css">
     <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.7.0/highlight.min.js"></script>
@@ -982,14 +982,14 @@
                 <div class="terminal-button minimize"></div>
                 <div class="terminal-button maximize"></div>
             </div>
-            <div class="terminal-title">DarkGPT Terminal</div>
+            <div class="terminal-title">OptiStack</div>
         </div>
         
         <div class="terminal-body">
             <div class="sidebar">
                 <div class="sidebar-header">
                     <div class="sidebar-logo">
-                        <img src="https://i.imgur.com/xeiymIs.png" alt="Logo" style="height: 200%; width: auto;" />
+                        <img src="OptiStack.png" alt="Logo" style="height: 200%; width: auto;" />
                     </div>
                     <button class="new-chat-btn" id="new-chat" style="margin: 21px 15px 0 35px;">
                         <i class="fas fa-plus"></i>
@@ -1023,7 +1023,7 @@
                 <div class="terminal-background"></div>
                 
                 <div class="chat-area" id="chat-area">
-                    <div class="welcome-text">DarkGPT Terminal</div>
+                    <div class="welcome-text">OptiStack</div>
                     <div class="welcome-text-secondary">More than AI - a mind by </div>
                     
                     <div id="chat-messages" class="chat-messages" style="display: none;"></div>
@@ -1033,7 +1033,7 @@
                     <div class="terminal-prompt">
                         <span class="prompt-user">user</span>
                         <span class="prompt-at">@</span>
-                        <span class="prompt-host">darkgpt</span>
+                        <span class="prompt-host">OptiStackan>
                         <span class="prompt-path">~/chat</span>
                         <span class="prompt-arrow">$</span>
                         <div class="command-line">
@@ -1601,8 +1601,8 @@ showAllBtn.onclick = function() {
             const formattedTime = new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
             let avatarHTML = role === 'user'
-                ? '<img src="img/DarkGPT .png" alt="User Avatar">'
-                : '<img src="img/DarkGPT.png" alt="AI Avatar">';
+                ? '<img src="img/OptiStack.png" alt="User Avatar">'
+                : '<img src="img/OptiStack.png" alt="AI Avatar">';
 
             let messageContent = '';
             if (role === 'ai') {
@@ -1851,7 +1851,7 @@ showAllBtn.onclick = function() {
 
                 const loading = document.createElement('div');
                 loading.className = 'message ai-message';
-                loading.innerHTML = `<div class="message-avatar ai-message-avatar"><img src="img/DarkGPT-logo.png" alt="User Avatar"></div>
+                loading.innerHTML = `<div class="message-avatar ai-message-avatar"><img src="img/OptiStack.png" alt="User Avatar"></div>
                                      <div class="message-content"><span class="spinner"></span>Thinking...</div>`;
                 chatMessages.appendChild(loading);
                 chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -1947,7 +1947,7 @@ showAllBtn.onclick = function() {
             const welcomeSecondaryEl = document.querySelector('.welcome-text-secondary');
             
             if (welcomeTextEl) {
-                const originalText = welcomeTextEl.textContent || 'DarkGPT, *More than AI*, a mind by Onelight';
+                const originalText = welcomeTextEl.textContent || 'OptiStack, *More than AI*, a mind by Onelight';
                 welcomeTextEl.innerHTML = marked.parse(originalText);
             }
             
@@ -2208,4 +2208,3 @@ showAllBtn.onclick = function() {
 </div>
 </body>
 </html>
-
